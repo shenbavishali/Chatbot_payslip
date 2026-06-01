@@ -607,7 +607,7 @@ function readNumberValue(row: Record<string, unknown>, keys: string[]): number |
 
 async function viewPayslipPdf(model: PayslipPdfModel): Promise<void> {
   if (model.pdfBase64) {
-    openPdfBlob(base64ToPdfBlob(model.pdfBase64), `payslip-${model.employeeId}-${model.payPeriod}.pdf`);
+    openStoredPayslipPdf(model);
     return;
   }
 
@@ -617,6 +617,11 @@ async function viewPayslipPdf(model: PayslipPdfModel): Promise<void> {
   drawPayslip(doc, model);
 
   openPdfBlob(doc.output("blob"), `payslip-${model.employeeId}-${model.payPeriod}.pdf`);
+}
+
+function openStoredPayslipPdf(model: PayslipPdfModel): void {
+  const blob = base64ToPdfBlob(model.pdfBase64 ?? "");
+  openPdfBlob(blob, `payslip-${model.employeeId}-${model.payPeriod}.pdf`);
 }
 
 function openPdfBlob(blob: Blob, fallbackFilename: string): void {
@@ -982,10 +987,11 @@ function formatLabel(value: string): string {
 
 function formatValue(value: unknown): string {
   if (typeof value === "number") {
-    return Number.isInteger(value) ? value.toString() : value.toFixed(2);
+    return formatAmount(value);
   }
   if (typeof value === "string") {
-    return value;
+    const parsed = Number(value.replace(/,/g, ""));
+    return Number.isFinite(parsed) ? formatAmount(parsed) : value;
   }
   if (value === null || value === undefined) {
     return "-";
